@@ -1,0 +1,28 @@
+name: Build and Test
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Preparar configuración de prueba
+        run: cp .env.example .env
+      - name: Construir y levantar los tres servicios
+        run: docker compose up -d --build --wait --wait-timeout 120
+      - name: Probar conexión, aislamiento y persistencia
+        run: python3 scripts/validar.py --persistencia
+      - name: Mostrar diagnóstico
+        if: failure()
+        run: docker compose ps && docker compose logs --tail 80
+      - name: Detener proyecto de prueba
+        if: always()
+        run: docker compose down
